@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "openedx-course-payments"
+version = "0.1.0"
+description = "Per-course purchases (Stripe) for Open edX"
+readme = "README.md"
+requires-python = ">=3.11"
+# Django, DRF and edx libs are provided by edx-platform
+dependencies = ["stripe>=16,<17"]
+
+[project.entry-points."lms.djangoapp"]
+course_payments = "course_payments.apps:CoursePaymentsConfig"
+
+[tool.setuptools.packages.find]
+include = ["course_payments*"]
