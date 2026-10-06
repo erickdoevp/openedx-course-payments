@@ -16,6 +16,7 @@ from common.djangoapps.course_modes.models import CourseMode
 from common.djangoapps.student.models import CourseEnrollment
 from openedx.core.djangoapps.content.course_overviews.models import CourseOverview
 
+from .filters import public_course_url
 from .models import Order
 
 log = logging.getLogger(__name__)
@@ -47,10 +48,10 @@ def _success_url(course_id):
 
 
 def _cancel_url(course_id):
-    template = settings.COURSE_PAYMENTS_CANCEL_URL or (
-        settings.LMS_ROOT_URL + "/courses/{course_id}/about?payment=cancelled"
-    )
-    return template.format(course_id=course_id)
+    if settings.COURSE_PAYMENTS_CANCEL_URL:
+        return settings.COURSE_PAYMENTS_CANCEL_URL.format(course_id=course_id)
+    about_url = public_course_url(course_id) or f"{settings.LMS_ROOT_URL}/courses/{course_id}/about"
+    return f"{about_url}?payment=cancelled"
 
 
 def _open_checkout(user, course_key, amount):
