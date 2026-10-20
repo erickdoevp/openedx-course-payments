@@ -41,10 +41,12 @@ def user_owns_course(user, course_key):
 
 
 def _success_url(course_id):
-    template = settings.COURSE_PAYMENTS_SUCCESS_URL or (
-        settings.LEARNING_MICROFRONTEND_URL + "/course/{course_id}/home?payment=success"
-    )
-    return template.format(course_id=course_id)
+    if settings.COURSE_PAYMENTS_SUCCESS_URL:
+        return settings.COURSE_PAYMENTS_SUCCESS_URL.format(course_id=course_id)
+    about_url = public_course_url(course_id)
+    if about_url:
+        return f"{about_url}?payment=success"
+    return f"{settings.LEARNING_MICROFRONTEND_URL}/course/{course_id}/home?payment=success"
 
 
 def _cancel_url(course_id):
