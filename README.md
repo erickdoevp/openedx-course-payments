@@ -12,8 +12,7 @@ and get lifetime access. A paid order enrolls the learner in the course's
    - `checkout.session.completed` (card, paid) → Order `paid`, learner enrolled as `verified`.
    - OXXO: `completed` arrives unpaid; access is granted on `checkout.session.async_payment_succeeded`.
    - `checkout.session.expired` / `async_payment_failed` → Order `failed`.
-   - `charge.refunded` (full refund) → Order `refunded`, learner back to `audit`
-     (or unenrolled if the course has no audit mode).
+   - `charge.refunded` (full refund) → Order `refunded`, learner unenrolled.
 3. Webhooks are verified with the signing secret and deduplicated by event id
    (`PaymentEvent`), so retries are safe.
 
@@ -31,6 +30,19 @@ Prices are set per course in Django admin: *Course modes → verified → min pr
 
 Paying twice for the same course (two tabs, OXXO after card) is prevented by
 reusing an open Checkout Session, and any duplicate payment is refunded automatically.
+
+## Only paying learners get in
+
+An Open edX Filters step on `org.openedx.learning.course.enrollment.started.v1`
+(`filters.RequirePaidEnrollment`) runs inside every `CourseEnrollment.enroll()`
+and rejects any enrollment that isn't `verified`. Learners can't request
+`verified` themselves, so the only way in is a paid order. Staff and the course
+team (any course role, e.g. the authors) are let through to preview the course.
+The filter is configured with `fail_silently: False`, so a broken step blocks
+enrollments instead of letting them through.
+
+Existing enrollments are not touched. To allow free enrollments again, set
+`COURSE_PAYMENTS_REQUIRE_PAID_ENROLLMENT = False`.
 
 ## Public site integration
 
@@ -88,5 +100,6 @@ tutor dev exec lms bash -c "cd /openedx/edx-platform && pytest -c setup.cfg --ro
 | `COURSE_PAYMENTS_STRIPE_SECRET_KEY` | `""` |
 | `COURSE_PAYMENTS_STRIPE_WEBHOOK_SECRET` | `""` |
 | `COURSE_PAYMENTS_PUBLIC_SITE_URL` | `""` (filters disabled) |
+| `COURSE_PAYMENTS_REQUIRE_PAID_ENROLLMENT` | `True` |
 | `COURSE_PAYMENTS_SUCCESS_URL` | learning MFE course home (`{course_id}` is replaced) |
 | `COURSE_PAYMENTS_CANCEL_URL` | public site course page (or LMS about page) |

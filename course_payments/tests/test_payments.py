@@ -218,7 +218,7 @@ class PaymentsTestCase(TestCase):
         order.refresh_from_db()
         assert order.status == Order.Status.FAILED
 
-    def test_full_refund_downgrades_to_audit(self):
+    def test_full_refund_unenrolls_even_with_audit_mode(self):
         order = self.make_order()
         signed_post(self.client, session_event("evt_1", "checkout.session.completed", order))
         refund = {"id": "evt_2", "type": "charge.refunded", "data": {"object": {
@@ -228,7 +228,7 @@ class PaymentsTestCase(TestCase):
 
         order.refresh_from_db()
         assert order.status == Order.Status.REFUNDED
-        assert self.mode() == ("audit", True)
+        assert self.mode() == ("verified", False)
 
     def test_full_refund_without_audit_mode_unenrolls(self):
         CourseMode.objects.filter(course_id=self.course.id, mode_slug="audit").delete()

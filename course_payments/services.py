@@ -192,8 +192,8 @@ def fail_checkout_session(session):
 @transaction.atomic
 def refund_charge(charge):
     """
-    A full refund removes the paid access: the learner goes back to ``audit``
-    if the course offers it, otherwise the enrollment is deactivated.
+    A full refund removes the access: the enrollment is deactivated. Courses
+    are only for paying learners, so there is no free ``audit`` to fall back to.
     """
     if not charge.get("refunded"):  # partial refund: keep access
         return None
@@ -207,9 +207,6 @@ def refund_charge(charge):
 
     enrollment = CourseEnrollment.get_enrollment(order.user, order.course_key)
     if enrollment is not None:
-        if CourseMode.objects.filter(course_id=order.course_key, mode_slug=CourseMode.AUDIT).exists():
-            enrollment.update_enrollment(mode=CourseMode.AUDIT)
-        else:
-            enrollment.update_enrollment(is_active=False)
+        enrollment.update_enrollment(is_active=False)
     log.info("Order %s refunded: access to %s removed for %s", order.pk, order.course_key, order.user.username)
     return order
