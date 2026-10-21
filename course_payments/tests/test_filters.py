@@ -1,10 +1,13 @@
 from types import SimpleNamespace
 
 import pytest
+from crum import impersonate
 from django.test import override_settings
+from rest_framework.test import APIClient
 from opaque_keys.edx.keys import CourseKey
 from openedx_filters.learning.filters import CourseAboutRenderStarted, CourseEnrollmentStarted
 
+from common.djangoapps.course_modes.tests.factories import CourseModeFactory
 from common.djangoapps.student.models import CourseAccessRole, CourseEnrollment, EnrollmentNotAllowed
 from common.djangoapps.student.tests.factories import UserFactory
 from openedx.core.djangoapps.content.course_overviews.tests.factories import CourseOverviewFactory
@@ -93,3 +96,43 @@ def test_enroll_runs_the_guard():
         CourseEnrollment.enroll(user, course.id)
     CourseEnrollment.enroll(user, course.id, mode="verified")
     assert CourseEnrollment.enrollment_mode_for_user(user, course.id) == ("verified", True)
+
+
+@pytest.mark.django_db
+def test_enrollments_requested_by_staff_go_through():
+    """How the Campus CMS grants access: its service account is global staff."""
+    with impersonate(UserFactory(is_staff=True)):
+        assert enroll_step(UserFactory(), None)["mode"] is None
+    with impersonate(UserFactory()), pytest.raises(CourseEnrollmentStarted.PreventEnrollment):
+        enroll_step(UserFactory(), None)
+
+
+@pytest.mark.django_db
+def test_enrollment_api_for_the_cms_and_for_learners():
+    """
+    Through the real enrollment API, which enrolls without a mode and then sets it:
+    staff can enroll a buyer as verified; a learner can't enroll themselves.
+    """
+    course = CourseOverviewFactory()
+    CourseModeFactory(course_id=course.id, mode_slug="verified", min_price=1)
+    buyer = UserFactory()
+    url = "/api/enrollment/v1/enrollment"
+
+    learner = APIClient()
+    learner.force_authenticate(buyer)
+    response = learner.post(url, {"course_details": {"course_id": str(course.id)}}, format="json")
+    # Rejected by the API (no free mode to enroll in) or by the guard: either way, not in.
+    assert response.status_code in (400, 403), response.content
+    assert CourseEnrollment.enrollment_mode_for_user(buyer, course.id) == (None, None)
+
+    service = APIClient()
+    service.force_authenticate(UserFactory(is_staff=True))
+    response = service.post(url, {"user": buyer.username, "mode": "verified", "is_active": True,
+                                  "course_details": {"course_id": str(course.id)}}, format="json")
+    assert response.status_code == 200, response.content
+    assert CourseEnrollment.enrollment_mode_for_user(buyer, course.id) == ("verified", True)
+
+    response = service.post(url, {"user": buyer.username, "mode": "verified", "is_active": False,
+                                  "course_details": {"course_id": str(course.id)}}, format="json")
+    assert response.status_code == 200, response.content
+    assert CourseEnrollment.enrollment_mode_for_user(buyer, course.id) == ("verified", False)

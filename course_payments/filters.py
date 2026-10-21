@@ -8,6 +8,7 @@ Open edX Filters pipeline steps.
 import re
 from urllib.parse import quote
 
+from crum import get_current_user
 from django.conf import settings
 from openedx_filters import PipelineStep
 from openedx_filters.learning.filters import CourseAboutRenderStarted, CourseEnrollmentStarted
@@ -49,16 +50,24 @@ class RequirePaidEnrollment(PipelineStep):
     """
     org.openedx.learning.course.enrollment.started.v1
 
-    Blocks free enrollments: only ``verified`` enrollments go through, which
-    the Campus CMS creates after a payment through the enrollment API
-    (learners can't request that mode themselves). Staff and the course team are let through so authors can
-    preview their courses. Disabled with COURSE_PAYMENTS_REQUIRE_PAID_ENROLLMENT.
+    Blocks free enrollments. Let through:
+
+    - ``verified`` enrollments (learners can't request that mode themselves);
+    - enrollments requested by global staff, such as the Campus CMS service
+      account granting access after a payment. The enrollment API first
+      enrolls without a mode and then switches to ``verified``, so the mode
+      alone isn't enough;
+    - staff and the course team being enrolled, so authors can preview their courses.
+
+    Disabled with COURSE_PAYMENTS_REQUIRE_PAID_ENROLLMENT.
     """
 
     def run_filter(self, user, course_key, mode):  # pylint: disable=arguments-differ
+        requester = get_current_user()
         if (
             not settings.COURSE_PAYMENTS_REQUIRE_PAID_ENROLLMENT
             or mode == CourseMode.VERIFIED
+            or (requester is not None and requester.is_staff)
             or user.is_staff
             or CourseAccessRole.objects.filter(user=user, course_id=course_key).exists()
         ):
