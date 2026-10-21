@@ -10,7 +10,6 @@ from common.djangoapps.student.tests.factories import UserFactory
 from openedx.core.djangoapps.content.course_overviews.tests.factories import CourseOverviewFactory
 
 from course_payments.filters import PublicSiteCourseAboutURL, RedirectCourseAboutToPublicSite, RequirePaidEnrollment
-from course_payments.services import _cancel_url
 
 COURSE_ID = "course-v1:OpenedX+DemoX+DemoCourse"
 PUBLIC_URL = "https://www.example.com/cursos/course-v1%3AOpenedX%2BDemoX%2BDemoCourse"
@@ -49,11 +48,6 @@ def test_about_page_redirects_to_public_site():
     with pytest.raises(CourseAboutRenderStarted.RedirectToPage) as exc:
         step(RedirectCourseAboutToPublicSite).run_filter(context=context, template_name="about.html")
     assert exc.value.redirect_to == PUBLIC_URL
-
-
-@override_settings(COURSE_PAYMENTS_PUBLIC_SITE_URL="https://www.example.com", COURSE_PAYMENTS_CANCEL_URL="")
-def test_cancelled_checkout_returns_to_public_site():
-    assert _cancel_url(COURSE_ID) == f"{PUBLIC_URL}?payment=cancelled"
 
 
 # --- RequirePaidEnrollment ------------------------------------------------

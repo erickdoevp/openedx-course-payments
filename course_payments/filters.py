@@ -50,8 +50,8 @@ class RequirePaidEnrollment(PipelineStep):
     org.openedx.learning.course.enrollment.started.v1
 
     Blocks free enrollments: only ``verified`` enrollments go through, which
-    are the ones created after a payment (learners can't request that mode
-    themselves). Staff and the course team are let through so authors can
+    the Campus CMS creates after a payment through the enrollment API
+    (learners can't request that mode themselves). Staff and the course team are let through so authors can
     preview their courses. Disabled with COURSE_PAYMENTS_REQUIRE_PAID_ENROLLMENT.
     """
 
