@@ -26,6 +26,18 @@ and get lifetime access. A paid order enrolls the learner in the course's
 | POST | `/payments/api/v1/checkout/` | required | `{"course_id": ...}` → `{"order_id", "checkout_url"}` |
 | GET | `/payments/api/v1/orders/` | required | The current user's orders |
 | POST | `/payments/webhook/stripe/` | Stripe signature | Stripe events |
+| DELETE | `/payments/api/v1/courses/{course_id}/learner-data/` | staff | Deletes enrollments, progress, grades, certificates, course modes and course roles (part of deleting a course; orders are kept) |
+
+## Endpoints (Studio)
+
+The plugin is also installed in Studio (`cms.djangoapp` entry point), only for this:
+
+| Method | URL | Auth | Description |
+|---|---|---|---|
+| DELETE | `/campus/api/v1/courses/{course_id}/` | staff | Deletes the course content, its assets and staff roles, like `./manage.py cms delete_course --remove-assets` |
+
+Campus's `/admin` calls both DELETE endpoints to delete a course completely.
+Changing entry points in `pyproject.toml` needs a reinstall (`make update` in plataforma-equipo).
 
 Prices are set per course in Django admin: *Course modes → verified → min price*.
 

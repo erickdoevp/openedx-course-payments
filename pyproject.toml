@@ -14,5 +14,8 @@ dependencies = ["stripe>=16,<17"]
 [project.entry-points."lms.djangoapp"]
 course_payments = "course_payments.apps:CoursePaymentsConfig"
 
+[project.entry-points."cms.djangoapp"]
+course_payments = "course_payments.apps:CoursePaymentsConfig"
+
 [tool.setuptools.packages.find]
 include = ["course_payments*"]

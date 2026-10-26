@@ -10,6 +10,7 @@ from rest_framework.views import APIView
 from openedx.core.djangoapps.content.course_overviews.models import CourseOverview
 
 from .. import services
+from ..cleanup import delete_course_learner_data
 from ..models import Order
 
 AUTHENTICATION_CLASSES = (JwtAuthentication, SessionAuthenticationAllowInactiveUser)
@@ -91,3 +92,23 @@ class MyOrdersView(ListAPIView):
 
     def get_queryset(self):
         return Order.objects.filter(user=self.request.user)
+
+
+class CourseLearnerDataView(APIView):
+    """
+    DELETE /payments/api/v1/courses/{course_id}/learner-data/
+
+    Staff only. Deletes enrollments, progress, grades, certificates, the price
+    (course modes) and course roles, as part of deleting a course; Studio
+    deletes the content. Orders are kept. Answers the deleted row counts.
+    """
+
+    authentication_classes = AUTHENTICATION_CLASSES
+    permission_classes = (permissions.IsAdminUser,)
+
+    def delete(self, request, course_id):
+        try:
+            course_key = CourseKey.from_string(course_id)
+        except InvalidKeyError:
+            return Response({"detail": "Invalid course id."}, status=400)
+        return Response({"course_id": str(course_key), "deleted": delete_course_learner_data(course_key)})

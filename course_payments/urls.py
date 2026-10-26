@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.urls import path, re_path
 
-from .api.views import CheckoutView, CourseProductView, MyOrdersView
+from .api.views import CheckoutView, CourseLearnerDataView, CourseProductView, MyOrdersView
 from .views import buy
 from .webhooks import stripe_webhook
 
@@ -12,6 +12,11 @@ urlpatterns = [
         rf"^api/v1/courses/{settings.COURSE_ID_PATTERN}/$",
         CourseProductView.as_view(),
         name="course-product",
+    ),
+    re_path(
+        rf"^api/v1/courses/{settings.COURSE_ID_PATTERN}/learner-data/$",
+        CourseLearnerDataView.as_view(),
+        name="course-learner-data",
     ),
     path("api/v1/checkout/", CheckoutView.as_view(), name="checkout"),
     path("api/v1/orders/", MyOrdersView.as_view(), name="my-orders"),
